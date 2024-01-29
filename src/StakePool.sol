@@ -10,7 +10,7 @@ contract StakePool is Ownable {
     MyNFT public nft; // ERC-721 NFT
 
     uint256 public stakingReward = 100; // Количество токенов для награды за стейкинг
-
+    uint256 public totalStaking;
     struct UserInfo {
         uint256 amount; // Количество стейкнутых токенов
         uint256 rewardDebt; // Долг награды (для корректного расчета награды)
@@ -18,7 +18,6 @@ contract StakePool is Ownable {
     }
 
     mapping(address => UserInfo) public userInfo; // Информация о пользователях
-    mapping(address => uint256) public 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
     event ClaimNFT(address indexed user, uint256 tokenId);
@@ -45,6 +44,7 @@ contract StakePool is Ownable {
             uint256 tokenId = uint256(
                 keccak256(abi.encodePacked(msg.sender, block.number))
             );
+            totalStaking += amount;
             nft.mint(msg.sender, tokenId);
             user.hasNFT = true;
             emit ClaimNFT(msg.sender, tokenId);
@@ -71,16 +71,29 @@ contract StakePool is Ownable {
             uint256 tokenId = uint256(
                 keccak256(abi.encodePacked(msg.sender, block.number))
             );
-            nft.mint(msg.sender, tokenId);
+            totalStaking -= amount;
+            nft.burn(msg.sender, tokenId);
             user.hasNFT = true;
             emit ClaimNFT(msg.sender, tokenId);
         }
 
         emit Withdraw(msg.sender, amount);
     }
-    function claimReward() external {
-        require(user.rewardDebt >0, "Reward must be grater than 0");
-        token.transfer(msg.sender, rewardDebt);
 
+    function claimReward() external {
+        // Обновление информации о пользователе
+        UserInfo storage user = userInfo[msg.sender];
+
+        // Расчет и перевод награды
+        uint256 reward = ((user.amount * stakingReward) / 1e18) -
+            user.rewardDebt;
+        token.transfer(msg.sender, reward);
+
+        // Обновление долга награды
+        user.rewardDebt = (user.amount * stakingReward) / 1e18;
+
+        emit ClaimReward(msg.sender, reward);
     }
+
+    function distributeRewards() external onlyOwner {}
 }
