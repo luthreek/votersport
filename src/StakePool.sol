@@ -18,7 +18,7 @@ contract StakePool is Ownable {
     }
 
     mapping(address => UserInfo) public userInfo; // Информация о пользователях
-
+    mapping(address => uint256) public 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
     event ClaimNFT(address indexed user, uint256 tokenId);
@@ -77,5 +77,10 @@ contract StakePool is Ownable {
         }
 
         emit Withdraw(msg.sender, amount);
+    }
+    function claimReward() external {
+        require(user.rewardDebt >0, "Reward must be grater than 0");
+        token.transfer(msg.sender, rewardDebt);
+
     }
 }
