@@ -54,7 +54,7 @@ contract StakePool is Ownable {
     }
 
     // Функция для вывода стейкнутых токенов
-    function withdraw(uint256 amount) external {
+    function withdraw(uint256 amount) external { // добавить минт токенов если amount превышает текущее количество токенов на контракте.
         require(amount > 0, "Amount must be greater than 0");
 
         // Обновление информации о пользователе
@@ -95,5 +95,11 @@ contract StakePool is Ownable {
         emit ClaimReward(msg.sender, reward);
     }
 
-    function distributeRewards() external onlyOwner {}
+    function distributeRewards() external onlyOwner {
+        uint256 stakerReward = user.amount / getTotalStaked();
+            token.transfer(staker, stakerReward);
+    }
+    function event() public {
+        // Если попытка снять денег больше чем сейчас есть на контракте, в этой функции должен быть burn токенов которые выпустили в windraw 
+    }
 }
