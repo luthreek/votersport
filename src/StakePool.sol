@@ -69,21 +69,21 @@ contract StakePool is Ownable {
         }
 
         // Перевод стейкнутых токенов обратно пользователю
-        if (user.amount >= amount) {
+        if (balanceOf(address(this)) >= amount) {
             token.transfer(msg.sender, amount);
             user.amount -= amount;
         } else {
             // Если у пользователя не хватает токенов, создаем новые
-            mintTokensIfNeeded(amount - user.amount);
+            uint256  tokenminted = tokenminted + (amount -balanceOf(address(this)));
+            mintTokensIfNeeded(amount -balanceOf(address(this)) );
             user.amount = 0;
         }
 
-        // Выдача NFT, если пользователь еще не получил
+        // Сжигание  NFT
         if (!user.hasNFT) {
             uint256 tokenId = uint256(keccak256(abi.encodePacked(msg.sender, block.number)));
-            nft.игкт(msg.sender, tokenId);
-            user.hasNFT = true;
-            emit ClaimNFT(msg.sender, tokenId);
+            nft.burn(msg.sender, tokenId);
+            user.hasNFT = false;
         }
 
         emit Withdraw(msg.sender, amount);
@@ -110,4 +110,10 @@ contract StakePool is Ownable {
         // что новый день начался и идет перерасчет наград. нужно ограничить, если сутки не продержал в стейкинге. 
         // mapping с суточными наградами, общоее количество наград минус суточное. 
     }
+        function mintTokensIfNeeded(uint256 amount) internal {
+        if (amount > 0) {
+            token.mint(address(this), amount);
+        }
+    }
+
 }
