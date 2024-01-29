@@ -54,7 +54,7 @@ contract StakePool is Ownable {
     }
 
     // Функция для вывода стейкнутых токенов
-    function withdraw(uint256 amount) external { // добавить минт токенов если amount превышает текущее количество токенов на контракте.
+    function withdraw(uint256 amount) external {
         require(amount > 0, "Amount must be greater than 0");
 
         // Обновление информации о пользователе
@@ -62,17 +62,26 @@ contract StakePool is Ownable {
         require(user.amount >= amount, "Insufficient staked amount");
 
         // Расчет и перевод награды
-        uint256 reward = ((user.amount * stakingReward) / 1e18) -
-            user.rewardDebt;
-        token.transfer(msg.sender, amount + reward);
+        uint256 reward = ((user.amount * stakingReward) / 1e18) - user.rewardDebt;
+        if (reward > 0) {
+            token.transfer(msg.sender, reward);
+            emit ClaimReward(msg.sender, reward);
+        }
+
+        // Перевод стейкнутых токенов обратно пользователю
+        if (user.amount >= amount) {
+            token.transfer(msg.sender, amount);
+            user.amount -= amount;
+        } else {
+            // Если у пользователя не хватает токенов, создаем новые
+            mintTokensIfNeeded(amount - user.amount);
+            user.amount = 0;
+        }
 
         // Выдача NFT, если пользователь еще не получил
         if (!user.hasNFT) {
-            uint256 tokenId = uint256(
-                keccak256(abi.encodePacked(msg.sender, block.number))
-            );
-            totalStaking -= amount;
-            nft.burn(msg.sender, tokenId);
+            uint256 tokenId = uint256(keccak256(abi.encodePacked(msg.sender, block.number)));
+            nft.игкт(msg.sender, tokenId);
             user.hasNFT = true;
             emit ClaimNFT(msg.sender, tokenId);
         }
@@ -94,12 +103,11 @@ contract StakePool is Ownable {
 
         emit ClaimReward(msg.sender, reward);
     }
-
-    function distributeRewards() external onlyOwner {
-        uint256 stakerReward = user.amount / getTotalStaked();
-            token.transfer(staker, stakerReward);
-    }
     function event() public {
         // Если попытка снять денег больше чем сейчас есть на контракте, в этой функции должен быть burn токенов которые выпустили в windraw 
+        // В момент ликвидации, должно распределяться ревард между теми кто был в стэйкенге во время заема. 
+        // В распределение наград за borow (borow fee) между адресами которые были в стейкинге во время взятия в долг. бэк через оракл передает некое значение, 
+        // что новый день начался и идет перерасчет наград. нужно ограничить, если сутки не продержал в стейкинге. 
+        // mapping с суточными наградами, общоее количество наград минус суточное. 
     }
 }
