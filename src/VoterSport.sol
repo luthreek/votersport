@@ -1,16 +1,16 @@
-// SPDX-License-Identifier: SEE LICENSE IN LICENSE
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 // Подключение библиотек OpenZeppelin
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Определение контракта ERC-20 токена с использованием OpenZeppelin
 contract VoterSport is ERC20, Ownable {
     // Конструктор контракта, задаем имя и символ токена, а также количество токенов
-    constructor() ERC20("VoterSport", "VTS") {
+    constructor(address owner) ERC20("VoterSport", "VTS") Ownable(owner) {
         // Выпуск общего количества токенов, например, 1 миллиард (1e9)
         _mint(msg.sender, 1e9 * 10 ** uint(decimals()));
-    }
+    } 
 
     // Функция для передачи токенов
     function transfer(
