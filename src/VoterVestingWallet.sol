@@ -47,7 +47,12 @@ contract VoterVestingWallet is Ownable{
         idToBene[beneID].share -= amount;
     }
 
-    //еще нужно добавить проверку на соответствие msg.sender к NFT от стейка
+    //еще нужно добавить возможность проверки на соответствие msg.sender к NFT от стейка
+    function withdrawStake(uint256 beneID, uint256 tokenId, uint256 amount) public onlyBeneficiaries(beneID) {
+
+    }
+
+
     function withdraw(uint256 beneID, address to, uint256 amount) public onlyBeneficiaries(beneID) {
         require(amount <= idToBene[beneID].share, "Amount exceeds your share!");
         checkRelease(beneID);
