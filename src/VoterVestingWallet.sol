@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract VoterVestingWallet is Ownable{
 
+    event MoneyReceived(address indexed _from, uint256 _amount);
+
     address token;
     address stakeContract;
     uint256 timeToRelease;
@@ -73,5 +75,10 @@ contract VoterVestingWallet is Ownable{
             return true;
         }
     }
+
+    fallback() external payable {}
+    receive() external payable {
+    emit MoneyReceived(msg.sender, msg.value);
+  }
 
 }
