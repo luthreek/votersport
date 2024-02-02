@@ -9,12 +9,14 @@ contract VoterVestingWallet is Ownable{
     address token;
     address stakeContract;
     uint256 timeToRelease;
+    uint256 balance;
 
     constructor(address owner, address _token, address _stakeContract, uint256 vestingTime) Ownable(owner) {
         token = _token;
         stakeContract = _stakeContract;
         release = Release.CLOSED;
         timeToRelease = block.timestamp + vestingTime;
+        balance = address(this).balance;
     }
 
     struct Beneficiarie {
@@ -37,7 +39,9 @@ contract VoterVestingWallet is Ownable{
   }
 
     function addBeneficiaries(uint256 beneID, address _bene, uint256 share) public onlyOwner {
+        require(share <= balance, "Share could not be greater than balance");
         idToBene[beneID] = Beneficiarie({wallet: _bene, share: share});
+        balance -= share;
     }
 
     function stake(uint256 beneID, uint256 amount) public onlyBeneficiaries(beneID) {
