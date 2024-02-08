@@ -331,9 +331,10 @@ contract StakingContract is Ownable, ERC721Holder {
 
     function calculateDayInterest(
         uint256 _amount,
-        uint256 _leverage
+        uint256 _leverage,
+        address _token
     ) internal view returns (uint256) {
-        return _amount * interestRates[_token].InterestRate(_leverage);
+        return _amount * getInterestRate(_token, _leverage);
     }
 
     function setInterestRates(
