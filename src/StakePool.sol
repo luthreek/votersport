@@ -166,10 +166,7 @@ contract StakingContract is Ownable, ERC721Holder {
         require(_amount > 0, "Amount must be greater than zero");
         require(loans[msg.sender][_token].amount == 0, "Existing loan exists");
 
-        uint256 firstDayInterest = calculateFirstDayInterest(
-            _amount,
-            _leverage
-        );
+        uint256 firstDayInterest = calculateDayInterest(_amount, _leverage);
         uint256 totalCollateralAmount = _amount - firstDayInterest;
         uint256 loanAmount = totalCollateralAmount * _leverage;
 
@@ -332,6 +329,13 @@ contract StakingContract is Ownable, ERC721Holder {
         }
     }
 
+    function calculateDayInterest(
+        uint256 _amount,
+        uint256 _leverage
+    ) internal view returns (uint256) {
+        return _amount * interestRates[_token].InterestRate(_leverage);
+    }
+
     function setInterestRates(
         address _token,
         uint256 _rate5x,
@@ -366,7 +370,7 @@ contract StakingContract is Ownable, ERC721Holder {
         address _token,
         string memory _outcome,
         uint256 _winningAmount,
-        uint256 _nonce,
+        _nonce,
         uint8[] memory _v,
         bytes32[] memory _r,
         bytes32[] memory _s
