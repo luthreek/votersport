@@ -37,30 +37,73 @@ contract StakingContract is Ownable, ERC721Holder {
 
     mapping(address => mapping(address => Loan)) public loans;
 
-    event StakeDeposited(address staker, address token, uint256 amount, uint256 tokenId);
-    event StakeWithdrawn(address staker, address token, uint256 stakedAmount, uint256 rewardAmount);
-    event LoanTaken(address borrower, address token, uint256 amount, uint256 leverage);
+    event StakeDeposited(
+        address staker,
+        address token,
+        uint256 amount,
+        uint256 tokenId
+    );
+    event StakeWithdrawn(
+        address staker,
+        address token,
+        uint256 stakedAmount,
+        uint256 rewardAmount
+    );
+    event LoanTaken(
+        address borrower,
+        address token,
+        uint256 amount,
+        uint256 leverage
+    );
     event LoanRepaid(address borrower, address token, uint256 amount);
-    event LoanLiquidated(address borrower, address token, uint256 amount, uint256 rewardAmount);
-    event OutcomeProcessed(address borrower, address token, string outcome, uint256 winningAmount);
+    event LoanLiquidated(
+        address borrower,
+        address token,
+        uint256 amount,
+        uint256 rewardAmount
+    );
+    event OutcomeProcessed(
+        address borrower,
+        address token,
+        string outcome,
+        uint256 winningAmount
+    );
 
     uint256 public constant MULTI_SIGNATURE_THRESHOLD = 3;
 
     Counters.Counter private _nonce;
     mapping(uint256 => uint256) private _confirmations;
 
-    modifier multiSignature(uint256 _operationHash, uint8[] memory _v, bytes32[] memory _r, bytes32[] memory _s) {
-        require(_v.length == MULTI_SIGNATURE_THRESHOLD, "Invalid number of signatures");
-        require(_v.length == _r.length && _v.length == _s.length, "Invalid input lengths");
+    modifier multiSignature(
+        uint256 _operationHash,
+        uint8[] memory _v,
+        bytes32[] memory _r,
+        bytes32[] memory _s
+    ) {
+        require(
+            _v.length == MULTI_SIGNATURE_THRESHOLD,
+            "Invalid number of signatures"
+        );
+        require(
+            _v.length == _r.length && _v.length == _s.length,
+            "Invalid input lengths"
+        );
 
         address lastSigner = address(0);
         for (uint256 i = 0; i < _v.length; i++) {
             address signer = recoverSigner(_operationHash, _v[i], _r[i], _s[i]);
-            require(signer > lastSigner && isOwner(signer), "Invalid signer or not owner");
+            require(
+                signer > lastSigner && isOwner(signer),
+                "Invalid signer or not owner"
+            );
             _confirmations[_operationHash] |= (1 << i);
             lastSigner = signer;
         }
-        require(popCount(_confirmations[_operationHash]) >= MULTI_SIGNATURE_THRESHOLD, "Insufficient signatures");
+        require(
+            popCount(_confirmations[_operationHash]) >=
+                MULTI_SIGNATURE_THRESHOLD,
+            "Insufficient signatures"
+        );
         _;
     }
 
@@ -111,18 +154,42 @@ contract StakingContract is Ownable, ERC721Holder {
         emit StakeWithdrawn(msg.sender, _token, reward);
     }
 
-    function takeLoan(address _token, uint256 _amount, uint256 _leverage) external {
-        require(_leverage == 5 || _leverage == 10 || _leverage == 20, "Invalid leverage");
+    function takeLoan(
+        address _token,
+        uint256 _amount,
+        uint256 _leverage
+    ) external {
+        require(
+            _leverage == 5 || _leverage == 10 || _leverage == 20,
+            "Invalid leverage"
+        );
         require(_amount > 0, "Amount must be greater than zero");
         require(loans[msg.sender][_token].amount == 0, "Existing loan exists");
 
+        uint256 firstDayInterest = calculateFirstDayInterest(
+            _amount,
+            _leverage
+        );
+        uint256 totalCollateralAmount = _amount - firstDayInterest;
+        uint256 loanAmount = totalCollateralAmount * _leverage;
+
         Loan storage loan = loans[msg.sender][_token];
-        loan.amount = _amount;
+        loan.amount = totalCollateralAmount;
         loan.leverage = _leverage;
         loan.startTimestamp = block.timestamp;
 
-        uint256 totalAmountToTransfer = _amount * _leverage;
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), totalAmountToTransfer);
+        require(
+            IERC20(_token).transferFrom(
+                msg.sender,
+                address(this),
+                totalCollateralAmount
+            ),
+            "Transfer failed"
+        );
+        require(
+            IERC20(_token).transferFrom(msg.sender, address(this), loanAmount),
+            "Transfer failed"
+        );
 
         emit LoanTaken(msg.sender, _token, _amount, _leverage);
     }
@@ -132,17 +199,27 @@ contract StakingContract is Ownable, ERC721Holder {
         require(loan.amount > 0, "No existing loan");
 
         uint256 elapsedTime = block.timestamp - loan.startTimestamp;
-        uint256 totalInterest = (loan.amount * loan.leverage * elapsedTime) / 1 days;
+        uint256 totalInterest = (loan.amount * loan.leverage * elapsedTime) /
+            1 days;
         uint256 totalToRepay = loan.amount + totalInterest;
 
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), totalToRepay);
+        IERC20(_token).safeTransferFrom(
+            msg.sender,
+            address(this),
+            totalToRepay
+        );
 
         if (totalInterest > loan.amount) {
             // Liquidate loan
             totalRewards[_token] += totalToRepay - loan.amount;
             delete loans[msg.sender][_token];
 
-            emit LoanLiquidated(msg.sender, _token, loan.amount, totalToRepay - loan.amount);
+            emit LoanLiquidated(
+                msg.sender,
+                _token,
+                loan.amount,
+                totalToRepay - loan.amount
+            );
         } else {
             // Repay loan
             delete loans[msg.sender][_token];
@@ -150,12 +227,19 @@ contract StakingContract is Ownable, ERC721Holder {
         }
     }
 
-    function processOutcome(address _token, string memory _outcome, uint256 _winningAmount) external multiSignature(
-        hashOperation(msg.sender, _token, _outcome, _winningAmount),
-        _v,
-        _r,
-        _s
-    ) {
+    function processOutcome(
+        address _token,
+        string memory _outcome,
+        uint256 _winningAmount
+    )
+        external
+        multiSignature(
+            hashOperation(msg.sender, _token, _outcome, _winningAmount),
+            _v,
+            _r,
+            _s
+        )
+    {
         require(_winningAmount > 0, "Winning amount must be greater than zero");
         Stake storage userStake = stakes[msg.sender][_token];
         require(userStake.amount > 0, "No stake exists");
@@ -163,8 +247,14 @@ contract StakingContract is Ownable, ERC721Holder {
         uint256 totalInterest = calculateTotalInterest(msg.sender, _token);
         uint256 totalAmountDue = userStake.amount + totalInterest;
 
-        if (keccak256(abi.encodePacked(_outcome)) == keccak256(abi.encodePacked("win"))) {
-            require(_winningAmount >= totalAmountDue, "Insufficient winning amount");
+        if (
+            keccak256(abi.encodePacked(_outcome)) ==
+            keccak256(abi.encodePacked("win"))
+        ) {
+            require(
+                _winningAmount >= totalAmountDue,
+                "Insufficient winning amount"
+            );
 
             uint256 netWinningAmount = _winningAmount - totalAmountDue;
             uint256 rewardAmount = totalInterest;
@@ -175,15 +265,31 @@ contract StakingContract is Ownable, ERC721Holder {
 
             IERC20(_token).safeTransfer(msg.sender, netWinningAmount);
 
-            emit StakeWithdrawn(msg.sender, _token, userStake.amount, rewardAmount);
-        } else if (keccak256(abi.encodePacked(_outcome)) == keccak256(abi.encodePacked("lose"))) {
+            emit StakeWithdrawn(
+                msg.sender,
+                _token,
+                userStake.amount,
+                rewardAmount
+            );
+        } else if (
+            keccak256(abi.encodePacked(_outcome)) ==
+            keccak256(abi.encodePacked("lose"))
+        ) {
             delete stakes[msg.sender][_token];
             totalStaked[_token] -= userStake.amount;
 
             totalRewards[_token] += totalInterest;
 
-            emit LoanLiquidated(msg.sender, _token, userStake.amount, totalInterest);
-        } else if (keccak256(abi.encodePacked(_outcome)) == keccak256(abi.encodePacked("draw"))) {
+            emit LoanLiquidated(
+                msg.sender,
+                _token,
+                userStake.amount,
+                totalInterest
+            );
+        } else if (
+            keccak256(abi.encodePacked(_outcome)) ==
+            keccak256(abi.encodePacked("draw"))
+        ) {
             delete stakes[msg.sender][_token];
             totalStaked[_token] -= userStake.amount;
 
@@ -200,13 +306,22 @@ contract StakingContract is Ownable, ERC721Holder {
         emit OutcomeProcessed(msg.sender, _token, _outcome, _winningAmount);
     }
 
-    function calculateTotalInterest(address _staker, address _token) public view returns (uint256) {
+    /*     function calculateTotalInterest(
+        address _staker,
+        address _token
+    ) public view returns (uint256) {
         Stake memory userStake = stakes[_staker][_token];
         uint256 elapsedTime = block.timestamp - userStake.timestamp;
-        return userStake.amount * getInterestRate(_token, userStake.amount) * elapsedTime / (1 days * 365);
-    }
+        return
+            (userStake.amount *
+                getInterestRate(_token, userStake.amount) *
+                elapsedTime) / (1 days * 365);
+    } */
 
-    function getInterestRate(address _token, uint256 _amount) internal view returns (uint256) {
+    function getInterestRate(
+        address _token,
+        uint256 _amount
+    ) internal view returns (uint256) {
         InterestRate memory rates = interestRates[_token];
         if (_amount > 0 && _amount <= 100) {
             return rates.rate5x;
@@ -217,30 +332,77 @@ contract StakingContract is Ownable, ERC721Holder {
         }
     }
 
-    function setInterestRates(address _token, uint256 _rate5x, uint256 _rate10x, uint256 _rate20x) external onlyOwner {
+    function setInterestRates(
+        address _token,
+        uint256 _rate5x,
+        uint256 _rate10x,
+        uint256 _rate20x
+    ) external onlyOwner {
         interestRates[_token] = InterestRate(_rate5x, _rate10x, _rate20x);
     }
 
-    function hashOperation(address _to, address _token, string memory _outcome, uint256 _winningAmount) public view returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(address(this), _to, _token, _outcome, _winningAmount)));
+    function hashOperation(
+        address _to,
+        address _token,
+        string memory _outcome,
+        uint256 _winningAmount
+    ) public view returns (uint256) {
+        return
+            uint256(
+                keccak256(
+                    abi.encodePacked(
+                        address(this),
+                        _to,
+                        _token,
+                        _outcome,
+                        _winningAmount
+                    )
+                )
+            );
     }
 
-    function execute(address payable _to, address _token, string memory _outcome, uint256 _winningAmount, uint256 _nonce, uint8[] memory _v, bytes32[] memory _r, bytes32[] memory _s)
+    function execute(
+        address payable _to,
+        address _token,
+        string memory _outcome,
+        uint256 _winningAmount,
+        uint256 _nonce,
+        uint8[] memory _v,
+        bytes32[] memory _r,
+        bytes32[] memory _s
+    )
         external
-        multiSignature(hashOperation(_to, _token, _outcome, _winningAmount), _v, _r, _s)
+        multiSignature(
+            hashOperation(_to, _token, _outcome, _winningAmount),
+            _v,
+            _r,
+            _s
+        )
     {
         require(_nonce == _nonce.current(), "Invalid nonce");
         _nonce.increment();
 
-        if (keccak256(abi.encodePacked(_outcome)) == keccak256(abi.encodePacked("win"))) {
+        if (
+            keccak256(abi.encodePacked(_outcome)) ==
+            keccak256(abi.encodePacked("win"))
+        ) {
             uint256 totalAmountDue = getTotalAmountDue(msg.sender, _token);
-            require(_winningAmount >= totalAmountDue, "Insufficient winning amount");
+            require(
+                _winningAmount >= totalAmountDue,
+                "Insufficient winning amount"
+            );
 
             uint256 netWinningAmount = _winningAmount - totalAmountDue;
             IERC20(_token).safeTransfer(_to, netWinningAmount);
-        } else if (keccak256(abi.encodePacked(_outcome)) == keccak256(abi.encodePacked("draw"))) {
+        } else if (
+            keccak256(abi.encodePacked(_outcome)) ==
+            keccak256(abi.encodePacked("draw"))
+        ) {
             uint256 totalAmountDue = getTotalAmountDue(msg.sender, _token);
-            require(_winningAmount >= totalAmountDue, "Insufficient winning amount");
+            require(
+                _winningAmount >= totalAmountDue,
+                "Insufficient winning amount"
+            );
 
             uint256 remainingAmount = _winningAmount - totalAmountDue;
             IERC20(_token).safeTransfer(_to, remainingAmount);
@@ -249,18 +411,31 @@ contract StakingContract is Ownable, ERC721Holder {
         }
     }
 
-    function getTotalAmountDue(address _staker, address _token) public view returns (uint256) {
+    function getTotalAmountDue(
+        address _staker,
+        address _token
+    ) public view returns (uint256) {
         Stake memory userStake = stakes[_staker][_token];
         uint256 totalInterest = calculateTotalInterest(_staker, _token);
         return userStake.amount + totalInterest;
     }
 
-    function recoverSigner(uint256 _hash, uint8 _v, bytes32 _r, bytes32 _s) internal pure returns (address) {
+    function recoverSigner(
+        uint256 _hash,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) internal pure returns (address) {
         return ecrecover(toEthSignedMessageHash(_hash), _v, _r, _s);
     }
 
-    function toEthSignedMessageHash(uint256 _hash) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", _hash));
+    function toEthSignedMessageHash(
+        uint256 _hash
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked("\x19Ethereum Signed Message:\n32", _hash)
+            );
     }
 
     function popCount(uint256 _x) internal pure returns (uint256 count) {
