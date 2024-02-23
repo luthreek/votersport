@@ -47,7 +47,7 @@ contract TokenStaking is SafeERC20,Ownable2Step,Pausable{
         uint256 stakedAmount = stakes[msg.sender].amount;
         delete stakes[msg.sender];
 
-        uint256 profit = stakedAmount.mulDiv(profitPercentage);
+        uint256 profit = stakedAmount.mul(profitPercentage).div(100);
 
         uint256 totalAmount = stakedAmount.add(profit);
         uint256 tokenBalance = token.balanceOf(address(this));
