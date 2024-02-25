@@ -32,7 +32,7 @@ contract VoterBank is Pausable, Ownable{
     mapping(uint256 => uint256) public target0BankAmount;
     mapping(uint256 => uint256) public target1BankAmount;
 
-        function pause() public onlyOwner {
+    function pause() public onlyOwner {
         _pause();
     }
 
@@ -40,7 +40,7 @@ contract VoterBank is Pausable, Ownable{
         _unpause();
     }
 
-    function setBet(uint256 _eventId, uint256 betId, address _playerAdress, uint256 _betAmount) public {
+    function setBet(uint256 _eventId, uint256 betId, address _playerAdress, uint256 _betAmount) public whenNotPaused{
 
         playerBet[betId] = Player({
             eventId: _eventId,
@@ -56,7 +56,7 @@ contract VoterBank is Pausable, Ownable{
 
     }
 
-    function takeBetPrize(uint256 _eventId, uint256 betId, uint256 _reward) public {
+    function takeBetPrize(uint256 _eventId, uint256 betId, uint256 _reward) public whenNotPaused{
         require(playerBet[betId].eventId == _eventId, 'Event mismatch');
         require(_reward >= bankAmount[_eventId], 'Reward is greater than the Bank');
 
