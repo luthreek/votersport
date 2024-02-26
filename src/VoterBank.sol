@@ -3,11 +3,15 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract VoterBank {
+contract VoterBank is Pausable, Ownable{
     using SafeERC20 for IERC20;
 
-    constructor(address _token) {
+    event MoneyReceived(address indexed _from, uint256 _amount);
+
+    constructor(address _token, address owner) Ownable(owner) {
         token = _token;
     }
 
@@ -17,75 +21,54 @@ contract VoterBank {
     address token;
     uint256 reward;
 
-    struct PlayerPari {
+    struct Player {
         uint256 eventId;
         address playerAdress;
         uint256 betAmount;
-        bool betTarget;
     }
 
-    struct PlayerLive {
-        uint256 eventId;
-        address playerAdress;
-        uint256 betAmount;
-        uint256 numberOfVotes;
-    }
-
-    mapping(uint256 => PlayerPari) public playerPari;
-    mapping(uint256 => PlayerLive) public playerLive;
+    mapping(uint256 => Player) public playerBet;
     mapping(uint256 => uint256) public bankAmount;
     mapping(uint256 => uint256) public target0BankAmount;
     mapping(uint256 => uint256) public target1BankAmount;
 
-    function setPari(uint256 _eventId, uint256 betId, address _playerAdress, bool _betTarget, uint256 _betAmount) public {
+    function pause() public onlyOwner {
+        _pause();
+    }
 
-        playerPari[betId] = PlayerPari({
+    function unpause() public onlyOwner {
+        _unpause();
+    }
+
+    function setBet(uint256 _eventId, uint256 betId, address _playerAdress, uint256 _betAmount) public whenNotPaused{
+
+        playerBet[betId] = Player({
             eventId: _eventId,
             playerAdress: _playerAdress,
-            betAmount: _betAmount,
-            betTarget: _betTarget
+            betAmount: _betAmount
         });
 
         bankAmount[_eventId] +=  _betAmount;
 
-        if(_betTarget == true) {
-            target1BankAmount[_eventId] +=  _betAmount;
-        } else {
-            target0BankAmount[_eventId] +=  _betAmount;
-        }
+
         
-        // IERC20(token).transferFrom(msg.sender, address(this), _betAmount);
+        IERC20(token).transferFrom(_playerAdress, address(this), _betAmount);
 
     }
 
-    function takePariPrize(uint256 _eventId, uint256 betId) public returns(uint256){
-        require(playerPari[betId].eventId == _eventId, 'Event mismatch');
-        if(playerPari[betId].betTarget == true) {
-            reward = bankAmount[_eventId] * playerPari[betId].betAmount / target1BankAmount[_eventId] - protocolFee;
-            return reward;
-        } else {
-            reward = bankAmount[_eventId] * playerPari[betId].betAmount / target0BankAmount[_eventId] - protocolFee;
-            return reward;
-        }
+    function takeBetPrize(uint256 _eventId, uint256 betId, uint256 _reward) public whenNotPaused{
+        require(playerBet[betId].eventId == _eventId, 'Event mismatch');
+        require(_reward >= bankAmount[_eventId], 'Reward is greater than the Bank');
+
+        address player = playerBet[betId].playerAdress;
         
-        // IERC20(token).safeTransfer(msg.sender, reward);
+        IERC20(token).safeTransfer(player, _reward);
 
     }
 
+    fallback() external payable {}
+    receive() external payable {
+    emit MoneyReceived(msg.sender, msg.value);}
 
-
-
-
-    function getPlayerPari(uint256 betId) public view returns(uint256) {
-        return playerPari[betId].betAmount;
-    }
-
-    function getTarget1BankAmount(uint256 _eventId) public view returns(uint256) {
-        return target1BankAmount[_eventId];
-    }
-
-    function getBankAmount(uint256 _eventId) public view returns(uint256) {
-        return bankAmount[_eventId];
-    }
 
 }
