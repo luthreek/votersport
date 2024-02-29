@@ -27,10 +27,18 @@ contract VoterBank is Pausable, Ownable{
         uint256 betAmount;
     }
 
+    enum Status {
+        OPEN,
+        CLOSED
+    }
+
+    Status public status;
+
     mapping(uint256 => Player) public playerBet;
     mapping(uint256 => uint256) public bankAmount;
     mapping(uint256 => uint256) public target0BankAmount;
     mapping(uint256 => uint256) public target1BankAmount;
+    mapping(uint256 => Status) public pariStatus;
 
     function pause() public onlyOwner {
         _pause();
@@ -41,6 +49,7 @@ contract VoterBank is Pausable, Ownable{
     }
 
     function setBet(uint256 _eventId, uint256 betId, address _playerAdress, uint256 _betAmount) public whenNotPaused{
+        require(pariStatus[_eventId] != Status.CLOSED, 'Pari for this event is closed');
 
         playerBet[betId] = Player({
             eventId: _eventId,
@@ -61,9 +70,15 @@ contract VoterBank is Pausable, Ownable{
         require(_reward >= bankAmount[_eventId], 'Reward is greater than the Bank');
 
         address player = playerBet[betId].playerAdress;
+
+        delete playerBet[betId];
         
         IERC20(token).safeTransfer(player, _reward);
 
+    }
+
+    function stopPariBets(uint256 _eventId) public {
+        pariStatus[_eventId] = Status.CLOSED;
     }
 
     fallback() external payable {}
