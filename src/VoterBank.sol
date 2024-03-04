@@ -15,9 +15,6 @@ contract VoterBank is Pausable, Ownable{
         token = _token;
     }
 
-    uint256 id;
-    uint256 protocolFee = 0.5 ether;
-    uint256 bank;
     address token;
     uint256 reward;
 
@@ -36,8 +33,6 @@ contract VoterBank is Pausable, Ownable{
 
     mapping(uint256 => Player) public playerBet;
     mapping(uint256 => uint256) public bankAmount;
-    mapping(uint256 => uint256) public target0BankAmount;
-    mapping(uint256 => uint256) public target1BankAmount;
     mapping(uint256 => Status) public pariStatus;
 
     function pause() public onlyOwner {
@@ -60,8 +55,8 @@ contract VoterBank is Pausable, Ownable{
         bankAmount[_eventId] +=  _betAmount;
 
 
-        
-        IERC20(token).transferFrom(_playerAdress, address(this), _betAmount);
+        IERC20(token).approve(_playerAdress, _betAmount);
+        IERC20(token).safeTransferFrom(_playerAdress, address(this), _betAmount);
 
     }
 
@@ -72,13 +67,23 @@ contract VoterBank is Pausable, Ownable{
         address player = playerBet[betId].playerAdress;
 
         delete playerBet[betId];
-        
-        IERC20(token).safeTransfer(player, _reward);
+        IERC20(token).approve(address(this), _reward);
+        IERC20(token).safeTransferFrom(address(this), player, _reward);
 
     }
 
     function stopPariBets(uint256 _eventId) public {
         pariStatus[_eventId] = Status.CLOSED;
+    }
+
+    function transferFees(address _to, uint256 _amount) public onlyOwner{
+        require(_amount <= address(this).balance, "Fee amount is greater than the balance");
+        IERC20(token).approve(address(this), _amount);
+        IERC20(token).safeTransferFrom(address(this), _to, _amount);
+    }
+
+    function getBalance() public view returns(uint256){
+        return address(this).balance;
     }
 
     fallback() external payable {}
