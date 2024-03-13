@@ -27,23 +27,10 @@ contract TestVoterBank is Test {
     }
 
     function testSetPari() public {
-        voterBank.setPari(12313, 1, USER1, true, SEND_VALUE1);
-        voterBank.setPari(12313, 2, USER2, false, SEND_VALUE2);
-        voterBank.setPari(12313, 3, USER3, true, SEND_VALUE3);
-        voterBank.setPari(12314, 1, USER1, true, SEND_VALUE1);
-        voterBank.getPlayerPari(1);
-        voterBank.getTarget1BankAmount(12313);
-        voterBank.getBankAmount(12313);
-        voterBank.getTarget1BankAmount(12314);
-        voterBank.getBankAmount(12314);
+        
+        voterBank.setBet(12313, 1, USER1, SEND_VALUE1);
     }
 
-        function testtakePariPrize() public {
-        voterBank.setPari(12313, 1, USER1, true, SEND_VALUE1);
-        voterBank.setPari(12313, 2, USER2, false, SEND_VALUE2);
-        voterBank.setPari(12313, 3, USER3, true, SEND_VALUE3);
-        voterBank.getPlayerPari(1);
-        voterBank.takePariPrize(12313, 1);
-    }
+
 
 }

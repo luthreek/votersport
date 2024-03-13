@@ -54,21 +54,19 @@ contract VoterBank is Pausable, Ownable{
 
         bankAmount[_eventId] +=  _betAmount;
 
-
-        IERC20(token).approve(_playerAdress, _betAmount);
-        IERC20(token).safeTransferFrom(_playerAdress, address(this), _betAmount);
+        IERC20(token).transferFrom(_playerAdress, address(this), _betAmount);
 
     }
 
     function takeBetPrize(uint256 _eventId, uint256 betId, uint256 _reward) public whenNotPaused{
         require(playerBet[betId].eventId == _eventId, 'Event mismatch');
-        require(_reward >= bankAmount[_eventId], 'Reward is greater than the Bank');
+        require(_reward <= bankAmount[_eventId], 'Reward is greater than the Bank');
 
         address player = playerBet[betId].playerAdress;
 
         delete playerBet[betId];
-        IERC20(token).approve(address(this), _reward);
-        IERC20(token).safeTransferFrom(address(this), player, _reward);
+
+        IERC20(token).transfer(player, _reward);
 
     }
 
@@ -77,13 +75,13 @@ contract VoterBank is Pausable, Ownable{
     }
 
     function transferFees(address _to, uint256 _amount) public onlyOwner{
-        require(_amount <= address(this).balance, "Fee amount is greater than the balance");
-        IERC20(token).approve(address(this), _amount);
-        IERC20(token).safeTransferFrom(address(this), _to, _amount);
+        require(_amount <= IERC20(token).balanceOf(address(this)), "Fee amount is greater than the balance");
+
+        IERC20(token).transfer(_to, _amount);
     }
 
     function getBalance() public view returns(uint256){
-        return address(this).balance;
+        return IERC20(token).balanceOf(address(this));
     }
 
     fallback() external payable {}
