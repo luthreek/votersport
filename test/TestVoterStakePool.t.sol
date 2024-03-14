@@ -56,13 +56,13 @@ contract TestStakePool is Test {
         assertEq(amount, SEND_VALUE1);
     }
 
-    /*     function testUnstake() public asPrankedUser(USER1) {
-        IERC20(voterSport).approve(USER1, STARTING_BALANCE);
+    function testUnstake() public asPrankedUser(USER1) {
+        IERC20(voterSport).approve(address(voterStakePool), SEND_VALUE1);
         voterStakePool.stake(SEND_VALUE1);
         vm.warp(block.timestamp + voterStakePool.stakingDuration());
         voterStakePool.unstake();
         (uint256 amount, uint256 startTime, uint256 profitPercentage) = voterStakePool.getStake(USER1);
         assertEq(IERC20(address(voterSport)).balanceOf(USER1), STARTING_BALANCE + SEND_VALUE1 * profitPercentage / 100);
         assertEq(amount, 0);
-    } */
+    }
 }

@@ -6,8 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract VoterStakePool is Ownable, Pausable {
+contract VoterStakePool is Ownable, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
@@ -32,7 +33,7 @@ contract VoterStakePool is Ownable, Pausable {
         profitPercentage = _profitPercentage;
     }
 
-    function stake(uint256 _amount) external whenNotPaused {
+    function stake(uint256 _amount) external nonReentrant whenNotPaused {
         require(_amount > 0, "Amount must be greater than 0");
         require(stakes[msg.sender].amount == 0, "Already staked");
         stakes[msg.sender] = Stake(_amount, block.timestamp, profitPercentage);
@@ -41,7 +42,7 @@ contract VoterStakePool is Ownable, Pausable {
         emit Staked(msg.sender, _amount);
     }
 
-    function unstake() external whenNotPaused {
+    function unstake() external nonReentrant whenNotPaused {
         require(stakes[msg.sender].amount > 0, "No stake");
         require(block.timestamp >= stakes[msg.sender].startTime + stakingDuration, "Staking duration not passed");
 
@@ -53,8 +54,7 @@ contract VoterStakePool is Ownable, Pausable {
         uint256 totalAmount = stakedAmount + profit;
         uint256 tokenBalance = IERC20(token).balanceOf(address(this));
         uint256 amountToReturn = totalAmount > tokenBalance ? tokenBalance : totalAmount;
-        IERC20(token).forceApprove(msg.sender, amountToReturn);
-        IERC20(token).safeTransferFrom(address(this), msg.sender, amountToReturn);
+        IERC20(token).transfer(msg.sender, amountToReturn);
 
         emit Unstaked(msg.sender, stakedAmount, profit);
     }
@@ -72,7 +72,7 @@ contract VoterStakePool is Ownable, Pausable {
         }
     }
 
-    function getStake(address _address) external view whenNotPaused returns (uint256, uint256, uint256) {
+    function getStake(address _address) external view returns (uint256, uint256, uint256) {
         return (stakes[_address].amount, stakes[_address].startTime, stakes[_address].profitPercentage);
     }
 }
