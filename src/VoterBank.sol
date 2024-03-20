@@ -59,10 +59,7 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
         whenNotPaused
         nonReentrant
     {
-        if (pariStatus[_eventId] != Status.OPEN) {
-            revert InvalidStatus();
-        }
-
+        if (pariStatus[_eventId] != Status.OPEN) revert InvalidStatus();
         playerBet[betId] = Player({eventId: _eventId, playerAdress: _playerAdress, betAmount: _betAmount});
 
         bankAmount[_eventId] += _betAmount;
@@ -72,13 +69,8 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
 
     function takeBetPrize(uint256 _eventId, uint256 betId, uint256 _reward) public whenNotPaused nonReentrant {
         _validateIsOperator();
-        if (playerBet[betId].eventId != _eventId) {
-            revert EventMissMath();
-        }
-
-        if (_reward > bankAmount[_eventId]) {
-            revert InvalidAmount();
-        }
+        if (playerBet[betId].eventId != _eventId) revert EventMissMath();
+        if (_reward > bankAmount[_eventId]) revert InvalidAmount();
         address player = playerBet[betId].playerAdress;
         delete playerBet[betId];
         bankAmount[_eventId] -= _reward;
@@ -108,9 +100,7 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
                 i++;
             }
         }
-        if (fees > IERC20(token).balanceOf(address(this)) || fees == 0) {
-            revert InvalidAmount();
-        }
+        if (fees > IERC20(token).balanceOf(address(this)) || fees == 0) revert InvalidAmount();
         IERC20(token).transfer(_to, fees);
     }
 
@@ -119,15 +109,11 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
     }
 
     function _validateIsOperator() private view {
-        if (!hasRole(OPERATOR_ROLE, msg.sender)) {
-            revert NotOperator();
-        }
+        if (!hasRole(OPERATOR_ROLE, msg.sender)) revert NotOperator();
     }
 
     function _validateIsOwner() private view {
-        if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
-            revert NotOwner();
-        }
+        if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) revert NotOwner();
     }
 
     fallback() external payable {}
