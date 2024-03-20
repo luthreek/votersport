@@ -18,6 +18,8 @@ contract VoterStakePool is Ownable, Pausable, ReentrancyGuard {
         uint256 profitPercentage;
     }
 
+    error InvalidAmount();
+
     mapping(address => Stake) public stakes;
 
     address public token;
@@ -34,7 +36,7 @@ contract VoterStakePool is Ownable, Pausable, ReentrancyGuard {
     }
 
     function stake(uint256 _amount) external nonReentrant whenNotPaused {
-        require(_amount > 0, "Amount must be greater than 0");
+        require(_amount > 0, "Invalid Amount");
         require(stakes[msg.sender].amount == 0, "Already staked");
         stakes[msg.sender] = Stake(_amount, block.timestamp, profitPercentage);
         IERC20(token).approve(address(this), _amount);
@@ -44,6 +46,7 @@ contract VoterStakePool is Ownable, Pausable, ReentrancyGuard {
 
     function unstake() external nonReentrant whenNotPaused {
         require(stakes[msg.sender].amount > 0, "No stake");
+
         require(block.timestamp >= stakes[msg.sender].startTime + stakingDuration, "Staking duration not passed");
 
         uint256 stakedAmount = stakes[msg.sender].amount;

@@ -5,6 +5,8 @@ pragma solidity ^0.8.0;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
+
+
 // Определение контракта ERC-20 токена с использованием OpenZeppelin
 contract VoterSport is ERC20, Ownable {
     // Конструктор контракта, задаем имя и символ токена, а также количество токенов
