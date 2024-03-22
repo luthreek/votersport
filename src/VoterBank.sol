@@ -69,6 +69,7 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
 
     function takeBetPrize(uint256 _eventId, uint256 betId, uint256 _reward) public whenNotPaused nonReentrant {
         _validateIsOperator();
+        if (pariStatus[_eventId] != Status.CLOSED) revert InvalidStatus();
         if (playerBet[betId].eventId != _eventId) revert EventMissMath();
         if (_reward > bankAmount[_eventId]) revert InvalidAmount();
         address player = playerBet[betId].playerAdress;

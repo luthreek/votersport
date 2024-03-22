@@ -48,6 +48,7 @@ contract TestVoterBank is Test {
 
     function testBetPari() public {
         testSetPari();
+        voterBank.stopPariBets(12313);
         voterBank.takeBetPrize(12313, 1, 1000);
     }
 
