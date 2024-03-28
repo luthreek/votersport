@@ -2,14 +2,14 @@
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
-import {VoterBank} from "../src/VoterBank.sol";
-import {DeployVoterBank} from "../script/DeployVoterBank.s.sol";
+import {VoterBankPari} from "../src/VoterBankPari.sol";
+import {DeployVoterBankPari} from "../script/DeployVoterBankPari.s.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DeployVoterSport} from "../script/DeployVoterSport.s.sol";
 import {VoterSport} from "../src/VoterSport.sol";
 
 contract TestVoterBank is Test {
-    VoterBank voterBank;
+    VoterBankPari voterBank;
     VoterSport voterSport;
     address USER1 = makeAddr("user1");
     address USER2 = makeAddr("user2");
@@ -30,7 +30,7 @@ contract TestVoterBank is Test {
     function setUp() external {
         DeployVoterSport deployVoterSport = new DeployVoterSport();
         voterSport = deployVoterSport.run(USER1);
-        DeployVoterBank deployVoterBank = new DeployVoterBank();
+        DeployVoterBankPari deployVoterBank = new DeployVoterBankPari();
         voterBank = deployVoterBank.run(address(voterSport));
         vm.prank(USER1);
         voterSport.mint(USER1, STARTING_BALANCE);

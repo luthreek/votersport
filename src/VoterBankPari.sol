@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
+contract VoterBankPari is Pausable, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     error InvalidAmount();
