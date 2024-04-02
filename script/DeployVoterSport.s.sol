@@ -5,9 +5,9 @@ import {Script} from "forge-std/Script.sol";
 import {VoterSport} from "../src/VoterSport.sol";
 
 contract DeployVoterSport is Script {
-    function run(address _owner) external returns (VoterSport) {
+    function run() external returns (VoterSport) {
         vm.startBroadcast();
-        VoterSport voterSport = new VoterSport(_owner);
+        VoterSport voterSport = new VoterSport(0x3B66e7a2C8147EA2f5FCf39613492774F361A0DF);
         vm.stopBroadcast();
         return (voterSport);
     }

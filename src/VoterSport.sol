@@ -33,6 +33,19 @@ contract VoterSport is ERC20, Ownable {
         return super.approve(spender, amount);
     }
 
+    function setVoteContract(address voteContract) public override onlyOwner{
+        return super.setVoteContract(voteContract);
+    }
+
+    function approveVote(address owner, uint256 amount) public override returns (bool) {
+        // Вызываем функцию approve из родительского контракта ERC20
+        return super.approveVote(owner, amount);
+    }
+
+    function increaseAllowance(address owner, address spender, uint256 addedValue) public override returns (bool){
+        return super.increaseAllowance(owner, spender, addedValue);
+    }
+
     // Функция для изъятия разрешения на использование токенов
     function revokeApproval(address spender) public {
         // Устанавливаем разрешение в 0

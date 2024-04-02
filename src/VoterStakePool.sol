@@ -39,8 +39,8 @@ contract VoterStakePool is Ownable, Pausable, ReentrancyGuard {
         require(_amount > 0, "Invalid Amount");
         require(stakes[msg.sender].amount == 0, "Already staked");
         stakes[msg.sender] = Stake(_amount, block.timestamp, profitPercentage);
-        IERC20(token).approve(address(this), _amount);
-        IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
+        // IERC20(token).approve(address(this), _amount);
+        // IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
         emit Staked(msg.sender, _amount);
     }
 
@@ -57,7 +57,7 @@ contract VoterStakePool is Ownable, Pausable, ReentrancyGuard {
         uint256 totalAmount = stakedAmount + profit;
         uint256 tokenBalance = IERC20(token).balanceOf(address(this));
         uint256 amountToReturn = totalAmount > tokenBalance ? tokenBalance : totalAmount;
-        IERC20(token).transfer(msg.sender, amountToReturn);
+        // IERC20(token).transfer(msg.sender, amountToReturn);
 
         emit Unstaked(msg.sender, stakedAmount, profit);
     }
