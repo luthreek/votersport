@@ -17,6 +17,9 @@ contract VoterBankPari is Pausable, AccessControl, ReentrancyGuard {
     error NotOwner();
 
     event MoneyReceived(address indexed _from, uint256 _amount);
+    event SetBet(address indexed _playerAdress, uint256 indexed _eventId, uint256 betId, uint256 amount);
+    event ClaimPrize(address indexed player, uint256 indexed _eventId, uint256 betId, uint256 _reward);
+    event StatusChange(uint256 indexed _eventId, Status status);
 
     constructor(address _token, address operator, address owner) {
         _grantRole(DEFAULT_ADMIN_ROLE, owner);
@@ -65,6 +68,7 @@ contract VoterBankPari is Pausable, AccessControl, ReentrancyGuard {
         bankAmount[_eventId] += _betAmount;
 
         IERC20(token).safeTransferFrom(_playerAdress, address(this), _betAmount);
+        emit SetBet(_playerAdress, _eventId, betId, _betAmount);
     }
 
     function takeBetPrize(uint256 _eventId, uint256 betId, uint256 _reward) public whenNotPaused nonReentrant {
@@ -76,16 +80,19 @@ contract VoterBankPari is Pausable, AccessControl, ReentrancyGuard {
         delete playerBet[betId];
         bankAmount[_eventId] -= _reward;
         IERC20(token).transfer(player, _reward);
+        emit ClaimPrize(player, _eventId, betId, _reward);
     }
 
     function stopPariBets(uint256 _eventId) public {
         _validateIsOperator();
         pariStatus[_eventId] = Status.CLOSED;
+        emit StatusChange(_eventId, pariStatus[_eventId]);
     }
 
     function stopPariPrize(uint256 _eventId) public returns (uint256) {
         _validateIsOperator();
         pariStatus[_eventId] = Status.DRAW;
+        emit StatusChange(_eventId, pariStatus[_eventId]);
         return bankAmount[_eventId];
     }
 
