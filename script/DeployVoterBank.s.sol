@@ -5,9 +5,9 @@ import {Script} from "forge-std/Script.sol";
 import {VoterBank} from "../src/VoterBank.sol";
 
 contract DeployVoterBank is Script {
-    function run() external returns (VoterBank) {
+    function run(address token) external returns (VoterBank) {
         vm.startBroadcast();
-        VoterBank voterBank = new VoterBank(0x884a3823cCa0C70E155Afc42bbD262586Ca89E9c, 0x884a3823cCa0C70E155Afc42bbD262586Ca89E9c, 0x884a3823cCa0C70E155Afc42bbD262586Ca89E9c);
+        VoterBank voterBank = new VoterBank(token, msg.sender, msg.sender);
         vm.stopBroadcast();
         return (voterBank);
     }

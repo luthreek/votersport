@@ -17,6 +17,10 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
     error NotOwner();
 
     event MoneyReceived(address indexed _from, uint256 _amount);
+    event SetBet(bool _eventType, address indexed _playerAdress, uint256 indexed _eventId, uint256 betId, uint256 amount);
+    event ClaimPrize(bool _eventType, address indexed player, uint256 indexed _eventId, uint256 betId, uint256 _reward);
+    event StatusPariChange(uint256 indexed _eventId, Status status);
+    event StatusLiveChange(uint256 indexed _eventId, Status status);
 
     constructor(address _token, address operator, address owner) {
         _grantRole(DEFAULT_ADMIN_ROLE, owner);
@@ -89,6 +93,7 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
             address(this),
             _betAmount
         );
+         emit SetBet(_eventType, _playerAdress, _eventId, betId, _betAmount);
     }
 
     function takeBetPrize(
@@ -104,46 +109,50 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
                 revert EventMissMath();
             if (_reward > pariBankAmount[_eventId]) revert InvalidAmount();
             address player = playerPariBet[betId].playerAdress;
-            uint256 bet = playerPariBet[betId].betAmount;
             delete playerPariBet[betId];
             pariBankAmount[_eventId] -= _reward;
             (uint256 currentAllowance) = IERC20(token).allowance(player, address(this));
-            IERC20(token).approveVote(player, currentAllowance + bet);
+            IERC20(token).approveVote(player, currentAllowance + _reward);
             IERC20(token).transfer(player, _reward);
+            emit ClaimPrize(_eventType, player, _eventId, betId, _reward);
         } else {
             if (liveStatus[_eventId] != Status.CLOSED) revert InvalidStatus();
             if (playerLiveBet[betId].eventId != _eventId)
                 revert EventMissMath();
             if (_reward > liveBankAmount[_eventId]) revert InvalidAmount();
             address player = playerLiveBet[betId].playerAdress;
-            uint256 bet = playerPariBet[betId].betAmount;
             delete playerLiveBet[betId];
             liveBankAmount[_eventId] -= _reward;
             (uint256 currentAllowance) = IERC20(token).allowance(player, address(this));
-            IERC20(token).approveVote(player, currentAllowance + bet);
+            IERC20(token).approveVote(player, currentAllowance + _reward);
             IERC20(token).transfer(player, _reward);
+            emit ClaimPrize(_eventType, player, _eventId, betId, _reward);
         }
     }
 
     function stopPariBets(uint256 _eventId) public {
         _validateIsOperator();
         pariStatus[_eventId] = Status.CLOSED;
+        emit StatusPariChange(_eventId, pariStatus[_eventId]);
     }
 
     function stopPariPrize(uint256 _eventId) public returns (uint256) {
         _validateIsOperator();
         pariStatus[_eventId] = Status.DRAW;
+        emit StatusPariChange(_eventId, pariStatus[_eventId]);
         return pariBankAmount[_eventId];
     }
 
     function stopLiveBets(uint256 _eventId) public {
         _validateIsOperator();
         liveStatus[_eventId] = Status.CLOSED;
+        emit StatusLiveChange(_eventId, liveStatus[_eventId]);
     }
 
     function stopLivePrize(uint256 _eventId) public returns (uint256) {
         _validateIsOperator();
         liveStatus[_eventId] = Status.DRAW;
+        emit StatusLiveChange(_eventId, liveStatus[_eventId]);
         return liveBankAmount[_eventId];
     }
 
