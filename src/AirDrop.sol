@@ -45,7 +45,7 @@ contract AirDrop is Pausable, AccessControl, ReentrancyGuard {
         _validateIsOperator();
         uint256 calldataLength = _dropCalldata.length;
         for (uint256 i = 0; i < _dropCalldata.length;) {
-            if (_dropCalldata.playerAddress[i] = 0) {
+            if (droplist[_dropCalldata.playerAddress[i]] = 0) {
                 droplist[_dropCalldata.playerAddress[i]] = _dropCalldata.amount[i];
                 IERC20(token).transfer(_dropCalldata.playerAddress[i], _dropCalldata.amount[i]);
                 emit SingleDrop(_dropCalldata.playerAddress[i], _dropCalldata.amount[i]);
