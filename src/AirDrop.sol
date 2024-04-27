@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 contract AirDrop is Pausable, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    event SingleDrop(address indexed _from, uint256 _amount);
+    event SingleDrop(address indexed to, uint256 amount);
 
     error AllreadiDrop();
     error NotOperator();
