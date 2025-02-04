@@ -2,12 +2,12 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Script} from "forge-std/Script.sol";
-import {VoterSport} from "../src/VoterSport.sol";
+import {Blacklist} from "../src/Blacklist.sol";
 
 contract DeployVoterSport is Script {
-    function run() external returns (VoterSport) {
+    function run() external returns (Blacklist) {
         vm.startBroadcast();
-        VoterSport voterSport = new VoterSport(0x9153F941557DE923bDf7dbC5149709ec8bE591dE);
+        Blacklist voterSport = new Blacklist(30 minutes);
         vm.stopBroadcast();
         return (voterSport);
     }
