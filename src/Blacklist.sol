@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract Blacklist {
+contract Blacklist is AccessControl {
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     constructor(uint256 timeToRelease) {
+        _grantRole(ADMIN_ROLE, msg.sender);
         deploymentDate = block.timestamp;
         releaseDate = timeToRelease + block.timestamp;
     }
@@ -22,20 +25,18 @@ contract Blacklist {
     event AddedToBlacklist(address account);
     event RemovedFromBlacklist(address account);
 
-    error ZeroAddressCannotBlacklisted();
+    error InvalidZeroAddress();
     error AccountAlreadyBlacklisted();
     error AccountNotBlacklisted();
 
-    function addToBlacklist(address account, uint256 vtsBalance) public virtual {
+    function addToBlacklist(address account, uint256 vtsBalance) public virtual onlyRole(ADMIN_ROLE) {
         require(block.timestamp <= deploymentDate + 2 days);
-        if (account == address(0)) revert ZeroAddressCannotBlacklisted();
+        if (account == address(0)) revert InvalidZeroAddress();
         if (blacklisted[account].blocked) revert AccountAlreadyBlacklisted();
         _addToBlacklist(account, vtsBalance);
     }
 
-    function removeFromBlacklist(
-        address account
-    ) public {
+    function removeFromBlacklist(address account) public onlyRole(ADMIN_ROLE) {
         require(releaseDate <= block.timestamp);
         if (!blacklisted[account].blocked) revert AccountNotBlacklisted();
         _removeFromBlacklist(account);
@@ -46,10 +47,7 @@ contract Blacklist {
     }
 
     function _addToBlacklist(address account, uint256 vtsBalance) internal {
-        blacklisted[account] = BL({
-            vtsBalance: vtsBalance,
-            blocked: true
-        });
+        blacklisted[account] = BL({vtsBalance: vtsBalance, blocked: true});
         emit AddedToBlacklist(account);
     }
 
