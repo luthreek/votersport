@@ -1,75 +1,94 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
 
-import {Test, console} from "forge-std/Test.sol";
-import {VoterBankPari} from "../src/VoterBankPari.sol";
-import {DeployVoterBankPari} from "../script/DeployVoterBankPari.s.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {DeployVoterSport} from "../script/DeployVoterSport.s.sol";
-import {VoterSport} from "../src/VoterSport.sol";
+import "forge-std/Test.sol";
+import "../src/VoterBank.sol";
+import "../src/VoterSport.sol";
 
-contract TestVoterBank is Test {
-    VoterBankPari voterBank;
-    VoterSport voterSport;
-    address USER1 = makeAddr("user1");
-    address USER2 = makeAddr("user2");
-    address USER3 = makeAddr("user3");
+contract VoterBankTest is Test {
+    VoterBank public voterBank;
+    VoterSport public token;
+    address public operator = address(0x100);
+    address public owner = address(0x200);
+    address public user = address(0x300);
 
-    uint256 constant SEND_VALUE1 = 5 ether;
-    uint256 constant SEND_VALUE2 = 7 ether;
-    uint256 constant SEND_VALUE3 = 9 ether;
-    uint256 constant STARTING_BALANCE = 10 ether;
-    uint256 constant GAS_PRICE = 1;
+    function setUp() public {
+        vm.prank(owner);
+        token = new VoterSport(owner);
 
-    modifier asPrankedUser(address user) {
+        vm.prank(owner);
+        token.mint(user, 10_000 * 1e18);
+
+        voterBank = new VoterBank(address(token), operator, owner);
+
+        uint256 transferAmount = 5_000 * 1e18;
+        vm.prank(owner);
+        token.transfer(address(voterBank), transferAmount);
+    }
+
+    function testSetBetPari() public {
+        uint256 eventId = 1;
+        uint256 betId = 1;
+        uint256 betAmount = 1000 * 1e18;
+
         vm.startPrank(user);
-        _;
+        token.approve(address(voterBank), betAmount);
         vm.stopPrank();
+
+        vm.prank(operator);
+        voterBank.setBet(true, eventId, betId, user, betAmount);
+
+        (uint256 eId, address player, uint256 amount) = voterBank.playerPariBet(betId);
+        assertEq(eId, eventId, unicode"Неверный eventId");
+        assertEq(player, user, unicode"Неверный адрес игрока");
+        assertEq(amount, betAmount, unicode"Неверное количество ставки");
     }
 
-    // function setUp() external {
-    //     DeployVoterSport deployVoterSport = new DeployVoterSport();
-    //     voterSport = deployVoterSport.run(USER1);
-    //     DeployVoterBankPari deployVoterBank = new DeployVoterBankPari();
-    //     voterBank = deployVoterBank.run(address(voterSport));
-    //     vm.prank(USER1);
-    //     voterSport.mint(USER1, STARTING_BALANCE);
-    //     vm.stopPrank();
-    //     vm.deal(USER1, STARTING_BALANCE);
-    //     vm.deal(USER2, STARTING_BALANCE);
-    //     vm.deal(USER3, STARTING_BALANCE);
-    // }
+    function testTakeBetPrizePari() public {
+        uint256 eventId = 1;
+        uint256 betId = 1;
+        uint256 betAmount = 1000 * 1e18;
+        uint256 reward = 500 * 1e18;
 
-    function testSetPari() public asPrankedUser(USER1) {
-        console.log(IERC20(address(voterSport)).balanceOf(address(USER1)));
-        IERC20(voterSport).approve(address(voterBank), SEND_VALUE1);
-        voterBank.setBet(12313, 1, USER1, 10000);
-    }
+        vm.startPrank(user);
+        token.approve(address(voterBank), betAmount);
+        vm.stopPrank();
 
-    function testBetPari() public {
-        testSetPari();
-        voterBank.stopPariBets(12313);
-        voterBank.takeBetPrize(12313, 1, 1000);
+        vm.prank(operator);
+        voterBank.setBet(true, eventId, betId, user, betAmount);
+
+        vm.prank(operator);
+        voterBank.stopPariBets(eventId);
+
+        vm.prank(operator);
+        voterBank.takeBetPrize(true, eventId, betId, reward);
+
+        (uint256 eId,,) = voterBank.playerPariBet(betId);
+        assertEq(eId, 0, unicode"Ставка не удалена после выплаты");
     }
 
     function testTransferFees() public {
-        testBetPari();
-        voterBank.stopPariPrize(12313);
-        uint256[] memory _eventIds = new uint256[](1);
-        _eventIds[0] = 12313;
-        voterBank.transferFees(USER1, _eventIds);
-        assertEq(IERC20(address(voterSport)).balanceOf(address(USER1)), STARTING_BALANCE);
-    }
+        uint256 eventId = 1;
+        uint256 betId = 1;
+        uint256 betAmount = 1000 * 1e18;
 
-    function testStopPariPrizeNotOperator() public asPrankedUser(USER2) {
-        vm.expectRevert();
-        voterBank.stopPariPrize(1);
-    }
+        vm.startPrank(user);
+        token.approve(address(voterBank), betAmount);
+        vm.stopPrank();
 
-    function testTransferFeesNotOwner() public asPrankedUser(USER2) {
-        uint256[] memory _eventIds = new uint256[](1);
-        _eventIds[0] = 12313;
-        vm.expectRevert();
-        voterBank.transferFees(USER1, _eventIds);
+        vm.prank(operator);
+        voterBank.setBet(true, eventId, betId, user, betAmount);
+
+        vm.prank(operator);
+        voterBank.stopPariPrize(eventId);
+
+        uint256[] memory eventIds = new uint256[](1);
+        eventIds[0] = eventId;
+
+        vm.prank(owner);
+        voterBank.transferFees(true, owner, eventIds);
+
+        uint256 bankAfter = voterBank.pariBankAmount(eventId);
+        assertEq(bankAfter, 0, unicode"Банк события должен обнулиться после передачи fee");
     }
 }

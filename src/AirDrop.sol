@@ -11,7 +11,7 @@ contract AirDrop is Pausable, AccessControl, ReentrancyGuard {
 
     event SingleDrop(address indexed to, uint256 amount);
 
-    error AllreadiDrop();
+    error AlreadyDropped();
     error NotOperator();
     error NotOwner();
 
@@ -34,21 +34,23 @@ contract AirDrop is Pausable, AccessControl, ReentrancyGuard {
     function singleDrop(address _player, uint256 _amount) public whenNotPaused nonReentrant {
         _validateIsOperator();
         if (droplist[_player] != 0) {
-            revert AllreadiDrop();
+            revert AlreadyDropped();
         }
         droplist[_player] = _amount;
-        IERC20(token).transfer(_player, _amount);
+        IERC20(token).safeTransfer(_player, _amount);
         emit SingleDrop(_player, _amount);
     }
 
     function massDrop(dropCalldata[] calldata _dropCalldata) public whenNotPaused nonReentrant {
         _validateIsOperator();
-        uint256 calldataLength = _dropCalldata.length;
-        for (uint256 i = 0; i < _dropCalldata.length;) {
-            if (droplist[_dropCalldata.playerAddress[i]] = 0) {
-                droplist[_dropCalldata.playerAddress[i]] = _dropCalldata.amount[i];
-                IERC20(token).transfer(_dropCalldata.playerAddress[i], _dropCalldata.amount[i]);
-                emit SingleDrop(_dropCalldata.playerAddress[i], _dropCalldata.amount[i]);
+        uint256 length = _dropCalldata.length;
+        for (uint256 i = 0; i < length;) {
+            address player = _dropCalldata[i].playerAddress;
+            uint256 amount = _dropCalldata[i].amount;
+            if (droplist[player] == 0) {
+                droplist[player] = amount;
+                IERC20(token).safeTransfer(player, amount);
+                emit SingleDrop(player, amount);
             }
             unchecked {
                 i++;
