@@ -17,7 +17,9 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
     error NotOwner();
 
     event MoneyReceived(address indexed _from, uint256 _amount);
-    event SetBet(bool _eventType, address indexed _playerAdress, uint256 indexed _eventId, uint256 betId, uint256 amount);
+    event SetBet(
+        bool _eventType, address indexed _playerAdress, uint256 indexed _eventId, uint256 betId, uint256 amount
+    );
     event ClaimPrize(bool _eventType, address indexed player, uint256 indexed _eventId, uint256 betId, uint256 _reward);
     event StatusPariChange(uint256 indexed _eventId, Status status);
     event StatusLiveChange(uint256 indexed _eventId, Status status);
@@ -61,71 +63,58 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
         _unpause();
     }
 
-    function setBet(
-        bool _eventType,
-        uint256 _eventId,
-        uint256 betId,
-        address _playerAdress,
-        uint256 _betAmount
-    ) public whenNotPaused nonReentrant {
+    function setBet(bool _eventType, uint256 _eventId, uint256 betId, address _playerAdress, uint256 _betAmount)
+        public
+        whenNotPaused
+        nonReentrant
+    {
         if (_eventType == true) {
             if (pariStatus[_eventId] != Status.OPEN) revert InvalidStatus();
-            playerPariBet[betId] = Player({
-                eventId: _eventId,
-                playerAdress: _playerAdress,
-                betAmount: _betAmount
-            });
+            playerPariBet[betId] = Player({eventId: _eventId, playerAdress: _playerAdress, betAmount: _betAmount});
 
             pariBankAmount[_eventId] += _betAmount;
         } else {
             if (liveStatus[_eventId] != Status.OPEN) revert InvalidStatus();
-            playerLiveBet[betId] = Player({
-                eventId: _eventId,
-                playerAdress: _playerAdress,
-                betAmount: _betAmount
-            });
+            playerLiveBet[betId] = Player({eventId: _eventId, playerAdress: _playerAdress, betAmount: _betAmount});
 
             liveBankAmount[_eventId] += _betAmount;
         }
 
-        IERC20(token).safeTransferFrom(
-            _playerAdress,
-            address(this),
-            _betAmount
-        );
-         emit SetBet(_eventType, _playerAdress, _eventId, betId, _betAmount);
+        IERC20(token).safeTransferFrom(_playerAdress, address(this), _betAmount);
+        emit SetBet(_eventType, _playerAdress, _eventId, betId, _betAmount);
     }
 
-    function takeBetPrize(
-        bool _eventType,
-        uint256 _eventId,
-        uint256 betId,
-        uint256 _reward
-    ) public whenNotPaused nonReentrant {
+    function takeBetPrize(bool _eventType, uint256 _eventId, uint256 betId, uint256 _reward)
+        public
+        whenNotPaused
+        nonReentrant
+    {
         _validateIsOperator();
         if (_eventType == true) {
             if (pariStatus[_eventId] != Status.CLOSED) revert InvalidStatus();
-            if (playerPariBet[betId].eventId != _eventId)
+            if (playerPariBet[betId].eventId != _eventId) {
                 revert EventMissMath();
+            }
             if (_reward > pariBankAmount[_eventId]) revert InvalidAmount();
             address player = playerPariBet[betId].playerAdress;
             delete playerPariBet[betId];
             pariBankAmount[_eventId] -= _reward;
             (uint256 currentAllowance) = IERC20(token).allowance(player, address(this));
-            IERC20(token).approveVote(player, currentAllowance + _reward);
-            IERC20(token).transfer(player, _reward);
+            IERC20(token).approve(player, currentAllowance + _reward);
+            IERC20(token).safeTransfer(player, _reward);
             emit ClaimPrize(_eventType, player, _eventId, betId, _reward);
         } else {
             if (liveStatus[_eventId] != Status.CLOSED) revert InvalidStatus();
-            if (playerLiveBet[betId].eventId != _eventId)
+            if (playerLiveBet[betId].eventId != _eventId) {
                 revert EventMissMath();
+            }
             if (_reward > liveBankAmount[_eventId]) revert InvalidAmount();
             address player = playerLiveBet[betId].playerAdress;
             delete playerLiveBet[betId];
             liveBankAmount[_eventId] -= _reward;
             (uint256 currentAllowance) = IERC20(token).allowance(player, address(this));
-            IERC20(token).approveVote(player, currentAllowance + _reward);
-            IERC20(token).transfer(player, _reward);
+            IERC20(token).approve(player, currentAllowance + _reward);
+            IERC20(token).safeTransfer(player, _reward);
             emit ClaimPrize(_eventType, player, _eventId, betId, _reward);
         }
     }
@@ -159,32 +148,30 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
     function transferFees(bool _eventType, address _to, uint256[] calldata _eventIds) public {
         _validateIsOwner();
         uint256 fees = 0;
-        if (_eventType == true){
-        for (uint256 i = 0; i < _eventIds.length; ) {
-            if (
-                pariStatus[_eventIds[i]] == Status.DRAW
-            ) {
-                fees = pariBankAmount[_eventIds[i]];
-                delete pariBankAmount[_eventIds[i]];
+        if (_eventType == true) {
+            for (uint256 i = 0; i < _eventIds.length;) {
+                if (pariStatus[_eventIds[i]] == Status.DRAW) {
+                    fees = pariBankAmount[_eventIds[i]];
+                    delete pariBankAmount[_eventIds[i]];
+                }
+                unchecked {
+                    i++;
+                }
             }
-            unchecked {
-                i++;
-            }
-        }} else {
-            for (uint256 i = 0; i < _eventIds.length; ) {
-            if (
-                liveStatus[_eventIds[i]] == Status.DRAW
-            ) {
-                fees = liveBankAmount[_eventIds[i]];
-                delete liveBankAmount[_eventIds[i]];
-            }
-            unchecked {
-                i++;
+        } else {
+            for (uint256 i = 0; i < _eventIds.length;) {
+                if (liveStatus[_eventIds[i]] == Status.DRAW) {
+                    fees = liveBankAmount[_eventIds[i]];
+                    delete liveBankAmount[_eventIds[i]];
+                }
+                unchecked {
+                    i++;
+                }
             }
         }
-        }
-        if (fees > IERC20(token).balanceOf(address(this)) || fees == 0)
+        if (fees > IERC20(token).balanceOf(address(this)) || fees == 0) {
             revert InvalidAmount();
+        }
         IERC20(token).transfer(_to, fees);
     }
 

@@ -22,9 +22,10 @@ contract VoterStakePool is Ownable, Pausable, ReentrancyGuard {
 
     mapping(address => Stake) public stakes;
 
+    // Адрес токена для стейкинга
     address public token;
     uint256 public stakingDuration;
-    uint256 profitPercentage;
+    uint256 public profitPercentage;
 
     event Staked(address indexed staker, uint256 amount);
     event Unstaked(address indexed staker, uint256 amount, uint256 profit);
@@ -35,30 +36,30 @@ contract VoterStakePool is Ownable, Pausable, ReentrancyGuard {
         profitPercentage = _profitPercentage;
     }
 
+    /// @notice Функция стейкинга: переводит токены от стейкера на контракт
     function stake(uint256 _amount) external nonReentrant whenNotPaused {
         require(_amount > 0, "Invalid Amount");
         require(stakes[msg.sender].amount == 0, "Already staked");
+        // Переводим токены от стейкера на адрес контракта
+        IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
         stakes[msg.sender] = Stake(_amount, block.timestamp, profitPercentage);
-        // IERC20(token).approve(address(this), _amount);
-        // IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
         emit Staked(msg.sender, _amount);
     }
 
+    /// @notice Функция анстейкинга: возвращает стейкеру токены с прибылью, если прошёл период стейкинга
     function unstake() external nonReentrant whenNotPaused {
         require(stakes[msg.sender].amount > 0, "No stake");
-
         require(block.timestamp >= stakes[msg.sender].startTime + stakingDuration, "Staking duration not passed");
 
         uint256 stakedAmount = stakes[msg.sender].amount;
         delete stakes[msg.sender];
 
         uint256 profit = stakedAmount * profitPercentage / 100;
-
         uint256 totalAmount = stakedAmount + profit;
         uint256 tokenBalance = IERC20(token).balanceOf(address(this));
         uint256 amountToReturn = totalAmount > tokenBalance ? tokenBalance : totalAmount;
-        // IERC20(token).transfer(msg.sender, amountToReturn);
-
+        // Переводим токены обратно стейкеру
+        IERC20(token).safeTransfer(msg.sender, amountToReturn);
         emit Unstaked(msg.sender, stakedAmount, profit);
     }
 
