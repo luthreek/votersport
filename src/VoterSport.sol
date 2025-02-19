@@ -15,10 +15,10 @@ contract VoterSport is ERC20, Ownable, Blacklist {
 
     /// @notice Переопределённая функция transfer с дополнительными проверками
     function transfer(address recipient, uint256 amount) public override returns (bool) {
-        require(recipient != vote, "Transfer to vote contract forbidden");
+        // require(recipient != vote, "Transfer to vote contract forbidden");
         uint256 senderBalance = balanceOf(msg.sender);
         // Применяем проверку только если адрес заблокирован или явно задан требуемый минимум (vtsBalance != 0)
-        if (blacklisted[msg.sender].blocked || blacklisted[msg.sender].vtsBalance != 0) {
+        if ((blacklisted[msg.sender].blocked || blacklisted[msg.sender].vtsBalance != 0) && recipient != vote) {
             require(
                 senderBalance - amount >= blacklisted[msg.sender].vtsBalance,
                 "Transfer exceeds allowed balance due to blacklist restrictions"

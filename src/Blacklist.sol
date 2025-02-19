@@ -18,6 +18,7 @@ contract Blacklist is AccessControl {
     struct BL {
         uint256 vtsBalance;
         bool blocked;
+        uint256 timeToRelease;
     }
 
     mapping(address => BL) public blacklisted;
@@ -47,8 +48,12 @@ contract Blacklist is AccessControl {
     }
 
     function _addToBlacklist(address account, uint256 vtsBalance) internal {
-        blacklisted[account] = BL({vtsBalance: vtsBalance, blocked: true});
+        blacklisted[account] = BL({vtsBalance: vtsBalance, blocked: true, timeToRelease: releaseDate});
         emit AddedToBlacklist(account);
+    }
+
+    function increaseLock(address account, uint256 addTime) public onlyRole(ADMIN_ROLE) {
+        blacklisted[account].timeToRelease = blacklisted[account].timeToRelease + addTime;
     }
 
     function _removeFromBlacklist(address account) internal {
