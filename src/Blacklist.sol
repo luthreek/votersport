@@ -6,19 +6,19 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract Blacklist is AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    constructor(uint256 timeToRelease) {
+    constructor() {
         _grantRole(ADMIN_ROLE, msg.sender);
         deploymentDate = block.timestamp;
-        releaseDate = timeToRelease + block.timestamp;
     }
 
     uint256 public releaseDate;
     uint256 public deploymentDate;
+    uint256 public blacklistEndDate;
 
     struct BL {
         uint256 vtsBalance;
         bool blocked;
-        uint256 timeToRelease;
+        uint256 dateOfRelease;
     }
 
     mapping(address => BL) public blacklisted;
@@ -30,8 +30,16 @@ contract Blacklist is AccessControl {
     error AccountAlreadyBlacklisted();
     error AccountNotBlacklisted();
 
+    function setTimeToRelease(uint256 _dateOfRelease) public onlyRole(ADMIN_ROLE) {
+        releaseDate = _dateOfRelease;
+    }
+
+    function setBlacklistDate(uint256 _blacklistEndDate) public onlyRole(ADMIN_ROLE) {
+        blacklistEndDate = _blacklistEndDate;
+    }
+
     function addToBlacklist(address account, uint256 vtsBalance) public virtual onlyRole(ADMIN_ROLE) {
-        require(block.timestamp <= deploymentDate + 2 days);
+        require(block.timestamp <= blacklistEndDate);
         if (account == address(0)) revert InvalidZeroAddress();
         if (blacklisted[account].blocked) revert AccountAlreadyBlacklisted();
         _addToBlacklist(account, vtsBalance);
@@ -48,12 +56,12 @@ contract Blacklist is AccessControl {
     }
 
     function _addToBlacklist(address account, uint256 vtsBalance) internal {
-        blacklisted[account] = BL({vtsBalance: vtsBalance, blocked: true, timeToRelease: releaseDate});
+        blacklisted[account] = BL({vtsBalance: vtsBalance, blocked: true, dateOfRelease: releaseDate});
         emit AddedToBlacklist(account);
     }
 
-    function increaseLock(address account, uint256 addTime) public onlyRole(ADMIN_ROLE) {
-        blacklisted[account].timeToRelease = blacklisted[account].timeToRelease + addTime;
+    function increaseLock(address account, uint256 newDate) public onlyRole(ADMIN_ROLE) {
+        blacklisted[account].dateOfRelease = newDate;
     }
 
     function _removeFromBlacklist(address account) internal {

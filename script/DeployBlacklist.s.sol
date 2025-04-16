@@ -7,7 +7,7 @@ import {Blacklist} from "../src/Blacklist.sol";
 contract DeployVoterSport is Script {
     function run() external returns (Blacklist) {
         vm.startBroadcast();
-        Blacklist voterSport = new Blacklist(30 minutes);
+        Blacklist voterSport = new Blacklist();
         vm.stopBroadcast();
         return (voterSport);
     }

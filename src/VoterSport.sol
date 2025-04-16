@@ -9,7 +9,7 @@ contract VoterSport is ERC20, Ownable, Blacklist {
 
     address public vote;
 
-    constructor(address owner) ERC20("VoterSport", "VTS") Ownable(owner) Blacklist(30 minutes) {
+    constructor(address owner) ERC20("VoteSport", "VTS") Ownable(owner) {
         _mint(msg.sender, 1e9 * 10 ** uint256(decimals()));
     }
 
@@ -18,7 +18,7 @@ contract VoterSport is ERC20, Ownable, Blacklist {
         // require(recipient != vote, "Transfer to vote contract forbidden");
         uint256 senderBalance = balanceOf(msg.sender);
         // Применяем проверку только если адрес заблокирован или явно задан требуемый минимум (vtsBalance != 0)
-        if ((blacklisted[msg.sender].blocked || blacklisted[msg.sender].vtsBalance != 0) && recipient != vote) {
+        if (blacklisted[msg.sender].blocked && recipient != vote) {
             require(
                 senderBalance - amount >= blacklisted[msg.sender].vtsBalance,
                 "Transfer exceeds allowed balance due to blacklist restrictions"
