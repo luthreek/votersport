@@ -10,6 +10,7 @@ contract AirDrop is Pausable, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     event SingleDrop(address indexed to, uint256 amount);
+    event MassDrop(address[] to, uint256[] amounts);
 
     error AlreadyDropped();
     error NotOperator();
@@ -18,10 +19,11 @@ contract AirDrop is Pausable, AccessControl, ReentrancyGuard {
     constructor(address _token, address operator, address owner) {
         _grantRole(DEFAULT_ADMIN_ROLE, owner);
         _grantRole(OPERATOR_ROLE, operator);
-        token = _token;
+        token = IERC20(_token);
     }
 
-    address token;
+    IERC20 public immutable token;
+
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     struct dropCalldata {
@@ -31,31 +33,33 @@ contract AirDrop is Pausable, AccessControl, ReentrancyGuard {
 
     mapping(address => uint256) public droplist;
 
-    function singleDrop(address _player, uint256 _amount) public whenNotPaused nonReentrant {
+    function singleDrop(address _player, uint256 _amount) external whenNotPaused nonReentrant {
         _validateIsOperator();
         if (droplist[_player] != 0) {
             revert AlreadyDropped();
         }
         droplist[_player] = _amount;
-        IERC20(token).safeTransfer(_player, _amount);
+        token.safeTransfer(_player, _amount);
         emit SingleDrop(_player, _amount);
     }
 
-    function massDrop(dropCalldata[] calldata _dropCalldata) public whenNotPaused nonReentrant {
+    function massDrop(dropCalldata[] calldata _dropCalldata) external whenNotPaused nonReentrant {
         _validateIsOperator();
         uint256 length = _dropCalldata.length;
+        address[] memory recipients = new address[](length);
+        uint256[] memory amounts = new uint256[](length);
         for (uint256 i = 0; i < length;) {
             address player = _dropCalldata[i].playerAddress;
             uint256 amount = _dropCalldata[i].amount;
             if (droplist[player] == 0) {
                 droplist[player] = amount;
-                IERC20(token).safeTransfer(player, amount);
-                emit SingleDrop(player, amount);
+                token.safeTransfer(player, amount);
             }
             unchecked {
                 i++;
             }
         }
+        emit MassDrop(recipients, amounts);
     }
 
     function pause() public {
