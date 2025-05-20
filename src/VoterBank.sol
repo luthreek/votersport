@@ -142,6 +142,9 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
         emit StatusPariChange(_eventId, pariStatus[_eventId]);
         fees = pariBankAmount[_eventId];
         delete pariBankAmount[_eventId];
+        // if (fees > IERC20(token).balanceOf(address(this)) || fees == 0) {
+        //     revert InvalidAmount();
+        // }
         IERC20(token).transfer(mainWallet, fees);
     }
 
@@ -158,38 +161,11 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
         emit StatusLiveChange(_eventId, liveStatus[_eventId]);
         fees = liveBankAmount[_eventId];
         delete liveBankAmount[_eventId];
+        // if (fees > IERC20(token).balanceOf(address(this)) || fees == 0) {
+        //     revert InvalidAmount();
+        // }
         IERC20(token).transfer(mainWallet, fees);
     }
-
-    // function transferFees(bool _eventType, address _to, uint256[] calldata _eventIds) public {
-    //     _validateIsOwner();
-    //     uint256 fees = 0;
-    //     if (_eventType == true) {
-    //         for (uint256 i = 0; i < _eventIds.length;) {
-    //             if (pariStatus[_eventIds[i]] == Status.DRAW) {
-    //                 fees = pariBankAmount[_eventIds[i]];
-    //                 delete pariBankAmount[_eventIds[i]];
-    //             }
-    //             unchecked {
-    //                 i++;
-    //             }
-    //         }
-    //     } else {
-    //         for (uint256 i = 0; i < _eventIds.length;) {
-    //             if (liveStatus[_eventIds[i]] == Status.DRAW) {
-    //                 fees = liveBankAmount[_eventIds[i]];
-    //                 delete liveBankAmount[_eventIds[i]];
-    //             }
-    //             unchecked {
-    //                 i++;
-    //             }
-    //         }
-    //     }
-    //     if (fees > IERC20(token).balanceOf(address(this)) || fees == 0) {
-    //         revert InvalidAmount();
-    //     }
-    //     IERC20(token).transfer(_to, fees);
-    // }
 
     function getBalance() public view returns (uint256) {
         return IERC20(token).balanceOf(address(this));

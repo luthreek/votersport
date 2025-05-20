@@ -56,7 +56,8 @@ contract VoterSport is ERC20, Ownable, Blacklist {
         return true;
     }
 
-    function approveVote(address owner, uint256 value) public virtual returns (bool) {
+    function approveVote(address owner, uint256 value) external returns (bool) {
+        require(msg.sender == vote);
         _approve(owner, vote, value);
         return true;
     }
