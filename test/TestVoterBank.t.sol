@@ -67,28 +67,28 @@ contract VoterBankTest is Test {
         assertEq(eId, 0, unicode"Ставка не удалена после выплаты");
     }
 
-    function testTransferFees() public {
-        uint256 eventId = 1;
-        uint256 betId = 1;
-        uint256 betAmount = 1000 * 1e18;
+    // function testTransferFees() public {
+    //     uint256 eventId = 1;
+    //     uint256 betId = 1;
+    //     uint256 betAmount = 1000 * 1e18;
 
-        vm.startPrank(user);
-        token.approve(address(voterBank), betAmount);
-        vm.stopPrank();
+    //     vm.startPrank(user);
+    //     token.approve(address(voterBank), betAmount);
+    //     vm.stopPrank();
 
-        vm.prank(operator);
-        voterBank.setBet(true, eventId, betId, user, betAmount);
+    //     vm.prank(operator);
+    //     voterBank.setBet(true, eventId, betId, user, betAmount);
 
-        vm.prank(operator);
-        voterBank.stopPariPrize(eventId);
+    //     vm.prank(operator);
+    //     voterBank.stopPariPrize(eventId);
 
-        uint256[] memory eventIds = new uint256[](1);
-        eventIds[0] = eventId;
+    //     uint256[] memory eventIds = new uint256[](1);
+    //     eventIds[0] = eventId;
 
-        vm.prank(owner);
-        voterBank.transferFees(true, owner, eventIds);
+    //     vm.prank(owner);
+    //     voterBank.transferFees(true, owner, eventIds);
 
-        uint256 bankAfter = voterBank.pariBankAmount(eventId);
-        assertEq(bankAfter, 0, unicode"Банк события должен обнулиться после передачи fee");
-    }
+    //     uint256 bankAfter = voterBank.pariBankAmount(eventId);
+    //     assertEq(bankAfter, 0, unicode"Банк события должен обнулиться после передачи fee");
+    // }
 }

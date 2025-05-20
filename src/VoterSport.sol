@@ -16,12 +16,11 @@ contract VoterSport is ERC20, Ownable, Blacklist {
     /// @notice Переопределённая функция transfer с дополнительными проверками
     function transfer(address recipient, uint256 amount) public override returns (bool) {
         // require(recipient != vote, "Transfer to vote contract forbidden");
-        uint256 senderBalance = balanceOf(msg.sender);
+
         // Применяем проверку только если адрес заблокирован или явно задан требуемый минимум (vtsBalance != 0)
         if (blacklisted[msg.sender].blocked && recipient != vote) {
-            require(
-                senderBalance - amount >= blacklisted[msg.sender].vtsBalance,
-                "Transfer exceeds allowed balance due to blacklist restrictions"
+            revert(
+                "Blacklist restrictions"
             );
         }
         return super.transfer(recipient, amount);
@@ -39,10 +38,6 @@ contract VoterSport is ERC20, Ownable, Blacklist {
         vote = voteContract;
     }
 
-    // function approveVote(address owner, uint256 amount) public returns (bool) {
-    //     return super.approve(owner, amount);
-    // }
-
     function revokeApproval(address spender) public {
         _approve(_msgSender(), spender, 0);
     }
@@ -54,11 +49,6 @@ contract VoterSport is ERC20, Ownable, Blacklist {
     function burn(uint256 amount) public onlyOwner {
         _burn(msg.sender, amount);
     }
-
-    function addToBlacklist(address account, uint256 vtsBalance) public override onlyOwner {
-        super.addToBlacklist(account, vtsBalance);
-    }
-
 
     function increaseAllowance(address owner, address spender, uint256 addedValue) public virtual returns (bool) {
 

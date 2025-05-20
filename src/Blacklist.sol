@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Blacklist is AccessControl {
+
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     constructor() {
-        _grantRole(ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, 0xe8ba149A60A7F400F3457F5F4A946F1C1013F13a);
+        _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
         deploymentDate = block.timestamp;
     }
 
@@ -16,7 +18,6 @@ contract Blacklist is AccessControl {
     uint256 public blacklistEndDate;
 
     struct BL {
-        uint256 vtsBalance;
         bool blocked;
         uint256 dateOfRelease;
     }
@@ -30,22 +31,22 @@ contract Blacklist is AccessControl {
     error AccountAlreadyBlacklisted();
     error AccountNotBlacklisted();
 
-    function setTimeToRelease(uint256 _dateOfRelease) public onlyRole(ADMIN_ROLE) {
+    function setTimeToRelease(uint256 _dateOfRelease) public onlyRole(ADMIN_ROLE){
         releaseDate = _dateOfRelease;
     }
 
-    function setBlacklistDate(uint256 _blacklistEndDate) public onlyRole(ADMIN_ROLE) {
+    function setBlacklistDate(uint256 _blacklistEndDate) public onlyRole(ADMIN_ROLE){
         blacklistEndDate = _blacklistEndDate;
     }
 
-    function addToBlacklist(address account, uint256 vtsBalance) public virtual onlyRole(ADMIN_ROLE) {
+    function addToBlacklist(address account) public onlyRole(ADMIN_ROLE){
         require(block.timestamp <= blacklistEndDate);
         if (account == address(0)) revert InvalidZeroAddress();
         if (blacklisted[account].blocked) revert AccountAlreadyBlacklisted();
-        _addToBlacklist(account, vtsBalance);
+        _addToBlacklist(account);
     }
 
-    function removeFromBlacklist(address account) public onlyRole(ADMIN_ROLE) {
+    function removeFromBlacklist(address account) public {
         require(releaseDate <= block.timestamp);
         if (!blacklisted[account].blocked) revert AccountNotBlacklisted();
         _removeFromBlacklist(account);
@@ -55,12 +56,12 @@ contract Blacklist is AccessControl {
         return _isBlacklisted(account);
     }
 
-    function _addToBlacklist(address account, uint256 vtsBalance) internal {
-        blacklisted[account] = BL({vtsBalance: vtsBalance, blocked: true, dateOfRelease: releaseDate});
+    function _addToBlacklist(address account) internal {
+        blacklisted[account] = BL({blocked: true, dateOfRelease: releaseDate});
         emit AddedToBlacklist(account);
     }
 
-    function increaseLock(address account, uint256 newDate) public onlyRole(ADMIN_ROLE) {
+    function increaseLock(address account, uint256 newDate) public onlyRole(ADMIN_ROLE){
         blacklisted[account].dateOfRelease = newDate;
     }
 

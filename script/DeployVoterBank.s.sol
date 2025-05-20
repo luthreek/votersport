@@ -7,8 +7,10 @@ import {VoterBank} from "../src/VoterBank.sol";
 contract DeployVoterBank is Script {
     function run() external returns (VoterBank) {
         vm.startBroadcast();
-        VoterBank voterBank = new VoterBank(0x0323128F72dC006EB66a39463cbE8e7eABD342a7, 0x4fD2A3B2c8FEc7B9cac5BcfF68b9e200125f4728, 0x4fD2A3B2c8FEc7B9cac5BcfF68b9e200125f4728);
+        VoterBank voterBank = new VoterBank(0x1dda30B3109361196CABCbeACbccFC344a9b06a7, 0xffC5C238c09faE86246e1AFCED5c8472Fcbfc479, 0xe8ba149A60A7F400F3457F5F4A946F1C1013F13a);
         vm.stopBroadcast();
         return (voterBank);
     }
 }
+
+

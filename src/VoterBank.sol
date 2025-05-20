@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./VoterSport.sol";
 
 contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -26,11 +27,14 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
 
     constructor(address _token, address operator, address owner) {
         _grantRole(DEFAULT_ADMIN_ROLE, owner);
+        _setRoleAdmin(OPERATOR_ROLE, DEFAULT_ADMIN_ROLE);
         _grantRole(OPERATOR_ROLE, operator);
         token = _token;
     }
 
     address token;
+    address mainWallet;
+    
 
     struct Player {
         uint256 eventId;
@@ -61,6 +65,11 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
     function unpause() public {
         _validateIsOwner();
         _unpause();
+    }
+
+    function setMainWallet(address _mainWallet) public {
+        _validateIsOwner();
+        mainWallet = _mainWallet;
     }
 
     function setBet(bool _eventType, uint256 _eventId, uint256 betId, address _playerAdress, uint256 _betAmount)
@@ -97,10 +106,11 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
             }
             if (_reward > pariBankAmount[_eventId]) revert InvalidAmount();
             address player = playerPariBet[betId].playerAdress;
+            
             delete playerPariBet[betId];
             pariBankAmount[_eventId] -= _reward;
             (uint256 currentAllowance) = IERC20(token).allowance(player, address(this));
-            IERC20(token).approve(player, currentAllowance + _reward);
+            VoterSport(token).approveVote(player, currentAllowance + _reward);
             IERC20(token).safeTransfer(player, _reward);
             emit ClaimPrize(_eventType, player, _eventId, betId, _reward);
         } else {
@@ -113,7 +123,7 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
             delete playerLiveBet[betId];
             liveBankAmount[_eventId] -= _reward;
             (uint256 currentAllowance) = IERC20(token).allowance(player, address(this));
-            IERC20(token).approve(player, currentAllowance + _reward);
+            VoterSport(token).approveVote(player, currentAllowance + _reward);
             IERC20(token).safeTransfer(player, _reward);
             emit ClaimPrize(_eventType, player, _eventId, betId, _reward);
         }
@@ -125,11 +135,14 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
         emit StatusPariChange(_eventId, pariStatus[_eventId]);
     }
 
-    function stopPariPrize(uint256 _eventId) public returns (uint256) {
+    function stopPariPrize(uint256 _eventId) public {
         _validateIsOperator();
+        uint256 fees;
         pariStatus[_eventId] = Status.DRAW;
         emit StatusPariChange(_eventId, pariStatus[_eventId]);
-        return pariBankAmount[_eventId];
+        fees = pariBankAmount[_eventId];
+        delete pariBankAmount[_eventId];
+        IERC20(token).transfer(mainWallet, fees);
     }
 
     function stopLiveBets(uint256 _eventId) public {
@@ -138,42 +151,45 @@ contract VoterBank is Pausable, AccessControl, ReentrancyGuard {
         emit StatusLiveChange(_eventId, liveStatus[_eventId]);
     }
 
-    function stopLivePrize(uint256 _eventId) public returns (uint256) {
+    function stopLivePrize(uint256 _eventId) public {
         _validateIsOperator();
+        uint256 fees;
         liveStatus[_eventId] = Status.DRAW;
         emit StatusLiveChange(_eventId, liveStatus[_eventId]);
-        return liveBankAmount[_eventId];
+        fees = liveBankAmount[_eventId];
+        delete liveBankAmount[_eventId];
+        IERC20(token).transfer(mainWallet, fees);
     }
 
-    function transferFees(bool _eventType, address _to, uint256[] calldata _eventIds) public {
-        _validateIsOwner();
-        uint256 fees = 0;
-        if (_eventType == true) {
-            for (uint256 i = 0; i < _eventIds.length;) {
-                if (pariStatus[_eventIds[i]] == Status.DRAW) {
-                    fees = pariBankAmount[_eventIds[i]];
-                    delete pariBankAmount[_eventIds[i]];
-                }
-                unchecked {
-                    i++;
-                }
-            }
-        } else {
-            for (uint256 i = 0; i < _eventIds.length;) {
-                if (liveStatus[_eventIds[i]] == Status.DRAW) {
-                    fees = liveBankAmount[_eventIds[i]];
-                    delete liveBankAmount[_eventIds[i]];
-                }
-                unchecked {
-                    i++;
-                }
-            }
-        }
-        if (fees > IERC20(token).balanceOf(address(this)) || fees == 0) {
-            revert InvalidAmount();
-        }
-        IERC20(token).transfer(_to, fees);
-    }
+    // function transferFees(bool _eventType, address _to, uint256[] calldata _eventIds) public {
+    //     _validateIsOwner();
+    //     uint256 fees = 0;
+    //     if (_eventType == true) {
+    //         for (uint256 i = 0; i < _eventIds.length;) {
+    //             if (pariStatus[_eventIds[i]] == Status.DRAW) {
+    //                 fees = pariBankAmount[_eventIds[i]];
+    //                 delete pariBankAmount[_eventIds[i]];
+    //             }
+    //             unchecked {
+    //                 i++;
+    //             }
+    //         }
+    //     } else {
+    //         for (uint256 i = 0; i < _eventIds.length;) {
+    //             if (liveStatus[_eventIds[i]] == Status.DRAW) {
+    //                 fees = liveBankAmount[_eventIds[i]];
+    //                 delete liveBankAmount[_eventIds[i]];
+    //             }
+    //             unchecked {
+    //                 i++;
+    //             }
+    //         }
+    //     }
+    //     if (fees > IERC20(token).balanceOf(address(this)) || fees == 0) {
+    //         revert InvalidAmount();
+    //     }
+    //     IERC20(token).transfer(_to, fees);
+    // }
 
     function getBalance() public view returns (uint256) {
         return IERC20(token).balanceOf(address(this));
